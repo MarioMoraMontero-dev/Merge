@@ -1,5 +1,5 @@
 public class CotizadorController {
-    public String stepNo {get;set;}
+   public String stepNo {get;set;}
     public String opportunityId {get;set;}
     public String paquete {get;set;}
     public String productId {get;set;}
@@ -11,11 +11,6 @@ public class CotizadorController {
     public Contact contact {get;set;}
     public Opportunity opportunity {get;set;}
     public paquete__c paqueteRecord {get;set;}
-    //Acciones del margen
-    public boolean ActivarMargen {get;set;}
-    
-    public Id IdPerfil {get; set;}
-    public String NombreDelPerfil {get; set;}
     
     public List<SelectOption> paqueteList {get;set;}
     public List<SelectOption> currencyList {get;set;}
@@ -65,11 +60,10 @@ public class CotizadorController {
     public decimal honorariosOtrosTotalSINDESCUENTO {get;set;}
     public decimal otrosTotalSINDESCUENTO {get;set;}
     public decimal externalTotalSINDESCUENTO {get;set;}
-    //Var descuento
+   	//Var descuento
     public boolean checkActivoDescuento{get;set;}
     public decimal valorDescuentoActual{get; set;}
     public String bloquearProceso{get; set;}
-    public Decimal montoPreDescuento{get; set;}
     ///////
     public decimal serviceIVATotal {get;set;}
     public decimal serviceOtrosIVATotal {get;set;}
@@ -81,11 +75,18 @@ public class CotizadorController {
     public decimal honorariosOtrosIVATotal {get;set;}
     public decimal otrosIVATotal {get;set;}
     public decimal externalIVATotal {get;set;}
-    public String bloquearCoti {get; set;}    
+    //Acciones del margen
+    public boolean ActivarMargen {get;set;}
+    
+    
     public decimal montoTotalOpp {get;set;}
     public decimal montoTotalIVAOpp {get;set;}
     public decimal montoTotalOppConDescuento {get;set;}
     public decimal montoFinalOpp {get;set;}
+    
+    public Id IdPerfil {get; set;}
+    public String NombreDelPerfil {get; set;}
+    
     
     public String nivelDescuento {get;set;}
     public boolean showChildProduct {get;set;}
@@ -94,8 +95,6 @@ public class CotizadorController {
     public Decimal discountPercentage {get;set;}
     public String discountName {get;set;}
 
-    public Map<String,String> LPrecios {get;set;}
-    
     public List<OpportunityLineItem> oliDeleteList {get;set;}
     public Map<String, String> mapRenamePackageName {get; set;}
     public String oldValue {get; set;}
@@ -112,13 +111,7 @@ public class CotizadorController {
     
     public void init()
     { 
-        bloquearCoti = '';
-        opportunityId = ApexPages.currentPage().getParameters().get('id');
-        List<Opportunity> oppApp = [SELECT (SELECT ID,Status,TargetObjectId FROM ProcessInstances WHERE Status !=: 'Approved') FROM Opportunity where id =:opportunityId];
-                                    if( oppApp[0].ProcessInstances.size() > 0 ){
-                                     bloquearCoti = 'si';   
-                                    }else{
-                                         IdPerfil= userinfo.getProfileId();
+        IdPerfil= userinfo.getProfileId();
         NombreDelPerfil=[Select Id,Name from Profile where Id=:IdPerfil].Name;
         system.debug('Perfil: '+NombreDelPerfil);
         if(NombreDelPerfil == 'CCM'){
@@ -126,22 +119,17 @@ public class CotizadorController {
         }else{
             ActivarMargen = false;
         }
-                                        bloquearCoti = 'no';
-                                     lstDiscount = new List<nivelDescuento__c>();
+       
+        lstDiscount = new List<nivelDescuento__c>();
         bloquearProceso = 'false';
         keykits = 'K';
         Lindora = 0;
         SanJose = 0;
         stepNo = '2';
-		montoPreDescuento = 0;     
+        opportunityId = ApexPages.currentPage().getParameters().get('id');
         oliDeleteList = new List<OpportunityLineItem>();
         mapRenamePackageName = new Map<String, String>();
-		LPrecios = new Map<String,String>();
-        List<Pricebook2> pb2 = [Select Id,Name from Pricebook2];
-        for(Pricebook2 pb2l : pb2){
-            
-            LPrecios.put(pb2l.Name,pb2l.Id);
-        }
+
         opportunity = [SELECT Id, Name, AccountId,Nombre_del_paciente_completo__c, Account.Name, CreatedDate, codigoDePresupuesto__c, procedimiento__c,
                        Porcentaje_de_Descuento__c, Tipo_de_cambio__c, CurrencyIsoCode, Precios_visibles__c, idioma__c,
                        Incluir__c, Vista__c, Nivel_de_descuento__c, Nivel_de_descuento__r.Porcentaje_de_Descuento__c,
@@ -154,7 +142,7 @@ public class CotizadorController {
                        Precio_aproximado_de_la_Cirugia_IVA__c
                        FROM Opportunity
                        WHERE Id =: opportunityId];
-            IdListaPrecios= opportunity.PriceBook2Id;
+        	IdListaPrecios= opportunity.PriceBook2Id;
         checkActivoDescuento = opportunity.Approved_Discount__c;
         valorDescuentoActual = opportunity.Extra_Discount__c;
         
@@ -241,9 +229,7 @@ public class CotizadorController {
         mapMainDiscountAmount = new Map<String, Decimal>();
 
         queryExistingProducts();
-        queryContact();   
-                                    }
-        
+        queryContact();
     }
     
     public String contactId{get;set;}
@@ -279,7 +265,10 @@ public class CotizadorController {
         {
             oliInsumosList = deleteUtil(oliInsumosList);
         }
-        
+        else if(tipo == 'OtrosInsumos')
+        {
+            oliInsumosOtrosList = deleteUtil(oliInsumosOtrosList);
+        }
         else if(tipo == 'Medicamentos')
         {
             oliMedicamentosList = deleteUtil(oliMedicamentosList);
@@ -298,10 +287,6 @@ public class CotizadorController {
         else if(tipo == 'Honorarios')
         {
             oliHonorariosList = deleteUtil(oliHonorariosList);
-        }
-        else if(tipo == 'OtrosInsumos')
-        {
-            oliInsumosOtrosList = deleteUtil(oliInsumosOtrosList);
         }
         else if(tipo == 'External')
         {
@@ -387,11 +372,12 @@ public class CotizadorController {
         {
             for(OpportunityLineItem oli : oliList)
             {
-                 Product2 product = new Product2(Name =oli.Descripcion_Custom__c, ProductCode = oli.PriceBookEntry.Product2.ProductCode);
+                Product2 product = new Product2(Name =oli.Descripcion_Custom__c, ProductCode = oli.PriceBookEntry.Product2.ProductCode);
                 product.Aplica_descuento__c =  oli.PriceBookEntry.Product2.Aplica_descuento__c;
                 product.iva__c = (oli.Product2.iva__c == null ? 0 : oli.Product2.iva__c);
+                system.debug('Margen: '+oli.Product2.margenDeTipoDescuento__c);
                 product.margenDeTipoDescuento__c = oli.Product2.margenDeTipoDescuento__c == NULL ? 0 : oli.Product2.margenDeTipoDescuento__c;
-                
+                system.debug('Margen Salida: '+product.margenDeTipoDescuento__c);
                 if(oli.Category__c == 'OTROS SERVICIOS' && oli.Otros__c)
                 {
                     if(!(showChildProduct == false && oli.Child_Product__c == true))
@@ -698,21 +684,23 @@ public class CotizadorController {
     
     public void calcTotal()
     {
-        lstDiscount = new List<nivelDescuento__c>();
         discountName = null;
-       
-        
+        if(opportunity.Nivel_de_descuento__c != null && opportunity.Nivel_de_descuento__r.Name != null)
+        {
+            discountName = opportunity.Nivel_de_descuento__r.Name;
+        }
+        else
+        {
             for(SelectOption so : nivelDescuentoList)
             {
                 if(so.getValue() == nivelDescuento)
                 {
                     discountName = so.getLabel();
-                    
                 }
             }
-       // }
-        system.debug('Nivel de descuento: '+discountName);
+        }
         changeDiscountDropDown(discountName);
+        
         
         otrosIVATotal = otrosTotal = serviceTotal = serviceIVATotal = insumosTotal = insumosIVATotal = 
         medicamentosTotal = medicamentosIVATotal = medicamentosOtrosTotal = medicamentosOtrosIVATotal = 
@@ -727,52 +715,59 @@ public class CotizadorController {
         Decimal medicamentosOtrosTotalNFCtrue = 0;
         Decimal honorariosTotalNFCtrue = 0;
         Decimal otrosTotalNFCtrue = 0;
-        
+		
         //Part_of_Package__c - This will be true for all the packages and package product. It will be false for individual products.
         //Not_For_Create__c = This will be true for package when getting the data by making the query from the database..
         //It will be true for the packages when we add from the UI. But in database we store it false. 
         Map<String, Decimal> mapPackageNameTotalAmount = new Map<String, Decimal>();
-        Map<String, Decimal> mapPackageNameTotalAmountSINDESCUENTO = new Map<String, Decimal>();
         Map<String, Decimal> mapPackageNameTotalIva = new Map<String, Decimal>();
         for(ProductWrapper w : oliServiceList)
         {
-            
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
-               
+                //This If condition will execute for the products which are part of the  packages.
                 if(w.oli.Parent_Package_Code__c != null)
                 {
-                     decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+                  decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+       
                     if(w.product.Aplica_descuento__c)
+                        
                         w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                    	
                     else
                         w.oli.TotalPrice = precioProducto * w.oli.Quantity;
+					
+                    if(w.oli.TotalPrice != null)
+                        w.oli.IVA__c = w.oli.TotalPrice  * (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
                     
                     if(!mapPackageNameTotalAmount.containsKey(w.oli.Parent_Package_Code__c))
                     {
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(precioProducto * w.oli.Quantity));
-                        
                     }
                     else
                     {
-                        decimal d2 = mapPackageNameTotalAmountSINDESCUENTO.get(w.oli.Parent_Package_Code__c);
-                        
                         Decimal d1 = mapPackageNameTotalAmount.get(w.oli.Parent_Package_Code__c);
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice+d1);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity)+d2);
-                        
                     }
-                    if(w.oli.TotalPrice != null)
-                        System.debug('TotalPrice: ' + w.oli.TotalPrice);
-                       w.oli.IVA__c = w.oli.TotalPrice  * (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
+                    
+                    if(!mapPackageNameTotalIva.containsKey(w.oli.Parent_Package_Code__c))
+                    {
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c);
+                    }
+                    else
+                    {
+                        Decimal d1 = mapPackageNameTotalIva.get(w.oli.Parent_Package_Code__c);
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c+d1);
+                    }
+                    
                 }
                 //This Else If condition will execute for the Individual products which are not part of the package.
                 else if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == false)
                 {
-                     decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
-                    
-                    
+                    decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+
                     if(w.product.Aplica_descuento__c)
                         w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
                     else
@@ -780,10 +775,11 @@ public class CotizadorController {
                     
                     if(w.oli.TotalPrice != null)
                     {
-                        w.oli.IVA__c = w.oli.TotalPrice * .08;
-                        serviceTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100)) ;
+                        serviceTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
                         serviceTotal += w.oli.TotalPrice;
                         serviceIVATotal += w.oli.IVA__c ;
+                         
                     }
                 }
             }
@@ -792,30 +788,36 @@ public class CotizadorController {
         
         for(ProductWrapper w : oliServiceList)
         {
-            //if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
+                //All Packages
                 if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == true)
                 {                    
-                     //This condition will execute if there is no product in the package.
                     System.Debug(' *****ONly Package  test123455' + w.oli);
+                    //This condition will execute if there is no product in the package.
                     if(mapPackageNameTotalAmount.get(w.product.ProductCode) == null)
                     {
-                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
-                        w.oli.IVA__c = w.oli.TotalPrice *  .08;
-                        serviceTotal += w.oli.TotalPrice;
-                        serviceTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
-                        serviceIVATotal += w.oli.IVA__c ;
+                        decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? (w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
+                        serviceTotalSINDESCUENTO  += (precioProducto * w.oli.Quantity);
+                            serviceTotal += w.oli.TotalPrice;
+                            serviceIVATotal += w.oli.IVA__c ;
                     }
-                   //This else Condition will execute for All the Packages if that contains product.
+                    //This else Condition will execute for All the Packages if that contains product.
                     else
                     {
-                        w.oli.TotalPrice = mapPackageNameTotalAmount.get(w.product.ProductCode)  * w.oli.Quantity;
-                        decimal montoServiceTotalSINDESCUENTO = mapPackageNameTotalAmountSINDESCUENTO.get(w.product.ProductCode)  * w.oli.Quantity;
+                        
+                        decimal precioProducto = mapPackageNameTotalAmount.get(w.product.ProductCode) + (ActivarMargen == true ? ( mapPackageNameTotalAmount.get(w.product.ProductCode) * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+                        w.oli.TotalPrice = precioProducto  * w.oli.Quantity;
+                        decimal montoServiceTotalSINDESCUENTO = precioProducto  * w.oli.Quantity;
+                        
                         if(w.oli.TotalPrice != null)
                         {
-                            w.oli.IVA__c = w.oli.TotalPrice * .08;
+                            w.oli.IVA__c = mapPackageNameTotalIva.get(w.product.ProductCode);
                             serviceTotalSINDESCUENTO += montoServiceTotalSINDESCUENTO;
                             serviceTotal += w.oli.TotalPrice;
                             serviceIVATotal += w.oli.IVA__c ;
@@ -825,55 +827,64 @@ public class CotizadorController {
             }
         }
         mapPackageNameTotalAmount.clear();
-		mapPackageNameTotalAmountSINDESCUENTO.clear();
-                        
+
         /******************/
         for(ProductWrapper w : oliServiceOtrosList)
         {
-            //if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
+           if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
                 //This If condition will execute for the products which are part of the  packages.
                 if(w.oli.Parent_Package_Code__c != null)
                 {
-                    System.Debug('--------package Product   test123455' + w.oli);
-                    if(w.product.Aplica_descuento__c)              
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                       decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+           
+                    if(w.product.Aplica_descuento__c)
+                        
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                    	
                     else
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
-
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity;
+					
+                    if(w.oli.TotalPrice != null)
+                        w.oli.IVA__c = w.oli.TotalPrice  * (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
+                    
                     if(!mapPackageNameTotalAmount.containsKey(w.oli.Parent_Package_Code__c))
                     {
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity));
-                        
                     }
                     else
                     {
-                        decimal d2 = mapPackageNameTotalAmountSINDESCUENTO.get(w.oli.Parent_Package_Code__c);
-                        
                         Decimal d1 = mapPackageNameTotalAmount.get(w.oli.Parent_Package_Code__c);
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice+d1);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity)+d2);
-                        
                     }
                     
-                    if(w.oli.TotalPrice != null)
-                        w.oli.IVA__c = w.oli.TotalPrice * .08;
+                    if(!mapPackageNameTotalIva.containsKey(w.oli.Parent_Package_Code__c))
+                    {
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c);
+                    }
+                    else
+                    {
+                        Decimal d1 = mapPackageNameTotalIva.get(w.oli.Parent_Package_Code__c);
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c+d1);
+                    }
+                    
                 }
                 //This Else If condition will execute for the Individual products which are not part of the package.
                 else if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == false)
                 {
-                    System.Debug('>>>>>>>>Individual Product test123455 ' + w.oli);
+                    decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+
                     if(w.product.Aplica_descuento__c)
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
                     else
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity;
+                    
                     if(w.oli.TotalPrice != null)
                     {
-                        w.oli.IVA__c = w.oli.TotalPrice  * .08;
-                        serviceOtrosTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100)) ;
+                        serviceOtrosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
                         serviceOtrosTotal += w.oli.TotalPrice;
                         serviceOtrosIVATotal += w.oli.IVA__c ;
                     }
@@ -883,101 +894,8 @@ public class CotizadorController {
         System.Debug(' mapPackageNameTotalAmount test123455' + mapPackageNameTotalAmount);
         for(ProductWrapper w : oliServiceOtrosList)
         {
-           // if(showChildProduct == false && w.oli.Child_Product__c)
-           //     continue;
-            if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
-            {
-                //All Packages
-                if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == true)
-                {                    
-                    System.Debug(' *****ONly Package  test123455' + w.oli);
-                     //This condition will execute if there is no product in the package.
-                    if(mapPackageNameTotalAmount.get(w.product.ProductCode) == null)
-                    {
-                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
-                        w.oli.IVA__c = w.oli.TotalPrice  * .08;
-                        serviceOtrosTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
-                        serviceOtrosTotal += w.oli.TotalPrice;
-                        serviceOtrosIVATotal += w.oli.IVA__c ;
-                    }
-                    //This else Condition will execute for All the Packages if that contains product.
-                    else
-                    {
-                        w.oli.TotalPrice = mapPackageNameTotalAmount.get(w.product.ProductCode)  * w.oli.Quantity;
-                        decimal montoserviceOtrosTotalSINDESCUENTO = mapPackageNameTotalAmountSINDESCUENTO.get(w.product.ProductCode)  * w.oli.Quantity;
-                        if(w.oli.TotalPrice != null)
-                        {
-                            w.oli.IVA__c = w.oli.TotalPrice  * .08;
-                            serviceOtrosTotal += w.oli.TotalPrice;
-                            serviceOtrosTotalSINDESCUENTO += montoserviceOtrosTotalSINDESCUENTO;
-                            serviceOtrosIVATotal += w.oli.IVA__c ;
-                        }
-                    }
-                }
-            }
-        }
-        mapPackageNameTotalAmount.clear();
-        mapPackageNameTotalAmountSINDESCUENTO.clear();
-        
-        /******************/
-        for(ProductWrapper w : oliInsumosList)
-        {
-           // if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
-            if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
-            {
-                //This If condition will execute for the products which are part of the  packages.
-                if(w.oli.Parent_Package_Code__c != null)
-                {
-                    System.Debug('--------package Product   test123455' + w.oli);
-                    System.Debug('--------tttttttt oli ' + w.oli + ' Product '+ w.product);
-                    if(w.product.Aplica_descuento__c)              
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
-                    else
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
-                    
-                    if(!mapPackageNameTotalAmount.containsKey(w.oli.Parent_Package_Code__c))
-                    {
-                        mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity));
-                        
-                    }
-                    else
-                    {
-                        decimal d2 = mapPackageNameTotalAmountSINDESCUENTO.get(w.oli.Parent_Package_Code__c);
-                        
-                        Decimal d1 = mapPackageNameTotalAmount.get(w.oli.Parent_Package_Code__c);
-                        mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice+d1);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity)+d2);
-                        
-                    }
-
-                    if(w.oli.TotalPrice != null)
-                        w.oli.IVA__c = w.oli.TotalPrice *  .08;
-                }
-                //This Else If condition will execute for the Individual products which are not part of the package.
-                else if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == false)
-                {
-                    System.Debug('>>>>>>>>Individual Product test123455 ' + w.oli);
-                    if(w.product.Aplica_descuento__c)
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
-                    else
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
-                    if(w.oli.TotalPrice != null)
-                    {
-                        w.oli.IVA__c = w.oli.TotalPrice * .08;
-                        insumosTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
-                        insumosTotal += w.oli.TotalPrice;
-                        insumosIVATotal += w.oli.IVA__c ;
-                    }
-                }
-            }
-        }
-        System.Debug(' mapPackageNameTotalAmount test123455' + mapPackageNameTotalAmount);
-        for(ProductWrapper w : oliInsumosList)
-        {
-            //if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
+             if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
                 //All Packages
@@ -987,21 +905,130 @@ public class CotizadorController {
                     //This condition will execute if there is no product in the package.
                     if(mapPackageNameTotalAmount.get(w.product.ProductCode) == null)
                     {
-                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
-                        w.oli.IVA__c = w.oli.TotalPrice *  .08;
-                         insumosTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                        decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+                        
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
+                          serviceOtrosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
+                        serviceOtrosTotal += w.oli.TotalPrice;
+                        serviceOtrosIVATotal += w.oli.IVA__c ;
+                    }
+                    //This else Condition will execute for All the Packages if that contains product.
+                    else
+                    {
+                        
+                        decimal precioProducto = mapPackageNameTotalAmount.get(w.product.ProductCode) + (ActivarMargen == true ? ( mapPackageNameTotalAmount.get(w.product.ProductCode) * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+                        w.oli.TotalPrice = precioProducto  * w.oli.Quantity;
+                        
+                        if(w.oli.TotalPrice != null)
+                        {
+                            w.oli.IVA__c = mapPackageNameTotalIva.get(w.product.ProductCode);
+                            serviceOtrosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
+                        serviceOtrosTotal += w.oli.TotalPrice;
+                        serviceOtrosIVATotal += w.oli.IVA__c ;
+                        }
+                    }
+                }
+            }
+        }
+        mapPackageNameTotalAmount.clear();
+        
+        /******************/
+        for(ProductWrapper w : oliInsumosList)
+        {
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
+            if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
+            {
+                //This If condition will execute for the products which are part of the  packages.
+                if(w.oli.Parent_Package_Code__c != null)
+                {
+                                  
+                    if(w.product.Aplica_descuento__c)
+                        
+                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                    	
+                    else
+                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity;
+					
+                    if(w.oli.TotalPrice != null)
+                        w.oli.IVA__c = w.oli.TotalPrice  * (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
+                    
+                    if(!mapPackageNameTotalAmount.containsKey(w.oli.Parent_Package_Code__c))
+                    {
+                        mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice);
+                    }
+                    else
+                    {
+                        Decimal d1 = mapPackageNameTotalAmount.get(w.oli.Parent_Package_Code__c);
+                        mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice+d1);
+                    }
+                    
+                    if(!mapPackageNameTotalIva.containsKey(w.oli.Parent_Package_Code__c))
+                    {
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c);
+                    }
+                    else
+                    {
+                        Decimal d1 = mapPackageNameTotalIva.get(w.oli.Parent_Package_Code__c);
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c+d1);
+                    }
+                    
+                }
+                //This Else If condition will execute for the Individual products which are not part of the package.
+                else if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == false)
+                {
+                    decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+
+                    if(w.product.Aplica_descuento__c)
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
+                    else
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity;
+                    
+                    if(w.oli.TotalPrice != null)
+                    {
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100)) ;
+                        insumosOtrosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
+                        insumosTotal += w.oli.TotalPrice;
+                        insumosIVATotal += w.oli.IVA__c ;
+                    }
+                }
+            }
+        }
+        System.Debug(' mapPackageNameTotalAmount test123455' + mapPackageNameTotalAmount);
+        for(ProductWrapper w : oliInsumosList)
+        {
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
+            if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
+            {
+                //All Packages
+                if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == true)
+                {                    
+                    System.Debug(' *****ONly Package  test123455' + w.oli);
+                    //This condition will execute if there is no product in the package.
+                    if(mapPackageNameTotalAmount.get(w.product.ProductCode) == null)
+                    {
+                        decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+                       
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
+                         insumosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
                         insumosTotal += w.oli.TotalPrice;
                         insumosIVATotal += w.oli.IVA__c ;
                     }
                     //This else Condition will execute for All the Packages if that contains product.
                     else
                     {
-                        w.oli.TotalPrice = mapPackageNameTotalAmount.get(w.product.ProductCode)  * w.oli.Quantity;
+                        
+                        decimal precioProducto = mapPackageNameTotalAmount.get(w.product.ProductCode) + (ActivarMargen == true ? ( mapPackageNameTotalAmount.get(w.product.ProductCode) * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+                        w.oli.TotalPrice = precioProducto  * w.oli.Quantity;
+                        
                         if(w.oli.TotalPrice != null)
                         {
-                            w.oli.IVA__c = w.oli.TotalPrice * .08;
+                            w.oli.IVA__c = mapPackageNameTotalIva.get(w.product.ProductCode);
                             insumosTotal += w.oli.TotalPrice;
-                             insumosTotalSINDESCUENTO += mapPackageNameTotalAmountSINDESCUENTO.get(w.product.ProductCode)  * w.oli.Quantity;
+                             insumosTotalSINDESCUENTO += w.oli.TotalPrice;
                              
                             insumosIVATotal += w.oli.IVA__c ;
                         }
@@ -1010,56 +1037,63 @@ public class CotizadorController {
             }
         }
         mapPackageNameTotalAmount.clear();
-        mapPackageNameTotalAmountSINDESCUENTO.clear();
         
        /******************/
         for(ProductWrapper w : oliInsumosOtrosList)
         {
-            //if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
                 //This If condition will execute for the products which are part of the  packages.
                 if(w.oli.Parent_Package_Code__c != null)
                 {
-                    System.Debug('--------package Product   test123455' + w.oli);      
-                    if(w.product.Aplica_descuento__c)     
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                                  
+                    if(w.product.Aplica_descuento__c)
+                        
+                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                    	
                     else
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity;
+					
+                    if(w.oli.TotalPrice != null)
+                        w.oli.IVA__c = w.oli.TotalPrice  * (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
                     
                     if(!mapPackageNameTotalAmount.containsKey(w.oli.Parent_Package_Code__c))
                     {
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity));
-                        
                     }
                     else
                     {
-                        decimal d2 = mapPackageNameTotalAmountSINDESCUENTO.get(w.oli.Parent_Package_Code__c);
-                        
                         Decimal d1 = mapPackageNameTotalAmount.get(w.oli.Parent_Package_Code__c);
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice+d1);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity)+d2);
-                        
                     }
-
-                    if(w.oli.TotalPrice != null)
-                        w.oli.IVA__c = w.oli.TotalPrice * .08;
+                    
+                    if(!mapPackageNameTotalIva.containsKey(w.oli.Parent_Package_Code__c))
+                    {
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c);
+                    }
+                    else
+                    {
+                        Decimal d1 = mapPackageNameTotalIva.get(w.oli.Parent_Package_Code__c);
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c+d1);
+                    }
+                    
                 }
                 //This Else If condition will execute for the Individual products which are not part of the package.
                 else if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == false)
                 {
-                    System.Debug('>>>>>>>>Individual Product test123455 ' + w.oli);
-                    if(w.product.Aplica_descuento__c) 
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity ) * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
+                    decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+
+                    if(w.product.Aplica_descuento__c)
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
                     else
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity );
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity;
                     
                     if(w.oli.TotalPrice != null)
                     {
-                        w.oli.IVA__c = w.oli.TotalPrice * .08;
-                        insumosOtrosTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100)) ;
+                        insumosOtrosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
                         insumosOtrosTotal += w.oli.TotalPrice;
                         insumosOtrosIVATotal += w.oli.IVA__c ;
                     }
@@ -1069,33 +1103,36 @@ public class CotizadorController {
         System.Debug(' mapPackageNameTotalAmount test123455' + mapPackageNameTotalAmount);
         for(ProductWrapper w : oliInsumosOtrosList)
         {
-           // if(showChildProduct == false && w.oli.Child_Product__c)
-           //     continue;
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
                 //All Packages
                 if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == true)
                 {                    
                     System.Debug(' *****ONly Package  test123455' + w.oli);
-                     //This condition will execute if there is no product in the package.
+                    //This condition will execute if there is no product in the package.
                     if(mapPackageNameTotalAmount.get(w.product.ProductCode) == null)
-                    {
-                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
-                        w.oli.IVA__c = w.oli.TotalPrice *  .08;
-                        insumosOtrosTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                    {decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
+                        insumosOtrosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
                         insumosOtrosTotal += w.oli.TotalPrice;
                         insumosOtrosIVATotal += w.oli.IVA__c ;
                     }
                     //This else Condition will execute for All the Packages if that contains product.
                     else
                     {
-                        w.oli.TotalPrice = mapPackageNameTotalAmount.get(w.product.ProductCode)  * w.oli.Quantity;
+                        
+                        decimal precioProducto = mapPackageNameTotalAmount.get(w.product.ProductCode) + (ActivarMargen == true ? ( mapPackageNameTotalAmount.get(w.product.ProductCode) * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+                        w.oli.TotalPrice = precioProducto  * w.oli.Quantity;
+                        
                         if(w.oli.TotalPrice != null)
                         {
-                            w.oli.IVA__c = w.oli.TotalPrice * .08;
-                            insumosOtrosTotalSINDESCUENTO += mapPackageNameTotalAmountSINDESCUENTO.get(w.product.ProductCode)  * w.oli.Quantity;
-                            
+                            w.oli.IVA__c = mapPackageNameTotalIva.get(w.product.ProductCode);
                             insumosOtrosTotal += w.oli.TotalPrice;
+                             insumosOtrosTotalSINDESCUENTO += w.oli.TotalPrice;
                             insumosOtrosIVATotal += w.oli.IVA__c ;
                         }
                     }
@@ -1103,55 +1140,63 @@ public class CotizadorController {
             }
         }
         mapPackageNameTotalAmount.clear();
-        mapPackageNameTotalAmountSINDESCUENTO.clear();
 
         /******************/
         for(ProductWrapper w : oliMedicamentosList)
         {
-            //if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
                 //This If condition will execute for the products which are part of the  packages.
                 if(w.oli.Parent_Package_Code__c != null)
                 {
-                    System.Debug('--------package Product   test123455' + w.oli); 
-                    if(w.product.Aplica_descuento__c)             
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                                  
+                    if(w.product.Aplica_descuento__c)
+                        
+                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                    	
                     else
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity;
+					
+                    if(w.oli.TotalPrice != null)
+                        w.oli.IVA__c = w.oli.TotalPrice  * (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
                     
                     if(!mapPackageNameTotalAmount.containsKey(w.oli.Parent_Package_Code__c))
                     {
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity));
-                        
                     }
                     else
                     {
-                        decimal d2 = mapPackageNameTotalAmountSINDESCUENTO.get(w.oli.Parent_Package_Code__c);
-                        
                         Decimal d1 = mapPackageNameTotalAmount.get(w.oli.Parent_Package_Code__c);
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice+d1);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity)+d2);
-                        
                     }
-                    if(w.oli.TotalPrice != null)
-                        w.oli.IVA__c = w.oli.TotalPrice * .08;
+                    
+                    if(!mapPackageNameTotalIva.containsKey(w.oli.Parent_Package_Code__c))
+                    {
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c);
+                    }
+                    else
+                    {
+                        Decimal d1 = mapPackageNameTotalIva.get(w.oli.Parent_Package_Code__c);
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c+d1);
+                    }
+                    
                 }
                 //This Else If condition will execute for the Individual products which are not part of the package.
                 else if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == false)
                 {
-                    System.Debug('>>>>>>>>Individual Product test123455 ' + w.oli);
-                    if(w.product.Aplica_descuento__c)    
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) *  getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
+                    decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+
+                    if(w.product.Aplica_descuento__c)
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
                     else
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity;
                     
                     if(w.oli.TotalPrice != null)
                     {
-                        w.oli.IVA__c = w.oli.TotalPrice *  .08;
-                        medicamentosTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100)) ;
+                        medicamentosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
                         medicamentosTotal += w.oli.TotalPrice;
                         medicamentosIVATotal += w.oli.IVA__c ;
                     }
@@ -1161,8 +1206,8 @@ public class CotizadorController {
         System.Debug(' mapPackageNameTotalAmount test123455' + mapPackageNameTotalAmount);
         for(ProductWrapper w : oliMedicamentosList)
         {
-            //if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
                 //All Packages
@@ -1172,22 +1217,29 @@ public class CotizadorController {
                     //This condition will execute if there is no product in the package.
                     if(mapPackageNameTotalAmount.get(w.product.ProductCode) == null)
                     {
-                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity  * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
-                        w.oli.IVA__c = w.oli.TotalPrice *  .08;
-                        medicamentosTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                        decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+                        
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
+                         medicamentosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
                         medicamentosTotal += w.oli.TotalPrice;
                         medicamentosIVATotal += w.oli.IVA__c ;
+                        
+                         
                     }
                     //This else Condition will execute for All the Packages if that contains product.
                     else
                     {
-                        w.oli.TotalPrice = mapPackageNameTotalAmount.get(w.product.ProductCode)  * w.oli.Quantity;
+                        
+                        decimal precioProducto = mapPackageNameTotalAmount.get(w.product.ProductCode) + (ActivarMargen == true ? ( mapPackageNameTotalAmount.get(w.product.ProductCode) * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+                        w.oli.TotalPrice = precioProducto  * w.oli.Quantity;
+                        
                         if(w.oli.TotalPrice != null)
                         {
-                            w.oli.IVA__c = w.oli.TotalPrice * .08;
+                            w.oli.IVA__c = mapPackageNameTotalIva.get(w.product.ProductCode);
                             medicamentosTotal += w.oli.TotalPrice;
-                            medicamentosTotalSINDESCUENTO += mapPackageNameTotalAmountSINDESCUENTO.get(w.product.ProductCode)  * w.oli.Quantity;
-                            
+                             medicamentosTotalSINDESCUENTO += w.oli.TotalPrice;
+                             
                             medicamentosIVATotal += w.oli.IVA__c ;
                         }
                     }
@@ -1195,55 +1247,63 @@ public class CotizadorController {
             }
         }
         mapPackageNameTotalAmount.clear();
-        mapPackageNameTotalAmountSINDESCUENTO.clear();
 
         /******************/
         for(ProductWrapper w : oliMedicamentosOtrosList)
         {
-            //if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
                 //This If condition will execute for the products which are part of the  packages.
                 if(w.oli.Parent_Package_Code__c != null)
                 {
-                    System.Debug('--------package Product   test123455' + w.oli);     
-                    if(w.product.Aplica_descuento__c)         
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
-                    else 
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
+                                  
+                    if(w.product.Aplica_descuento__c)
+                        
+                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                    	
+                    else
+                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity;
+					
+                    if(w.oli.TotalPrice != null)
+                        w.oli.IVA__c = w.oli.TotalPrice  * (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
                     
                     if(!mapPackageNameTotalAmount.containsKey(w.oli.Parent_Package_Code__c))
                     {
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity));
-                        
                     }
                     else
                     {
-                        decimal d2 = mapPackageNameTotalAmountSINDESCUENTO.get(w.oli.Parent_Package_Code__c);
-                        
                         Decimal d1 = mapPackageNameTotalAmount.get(w.oli.Parent_Package_Code__c);
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice+d1);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity)+d2);
-                        
                     }
-                    if(w.oli.TotalPrice != null)
-                        w.oli.IVA__c = w.oli.TotalPrice *  .08;
+                    
+                    if(!mapPackageNameTotalIva.containsKey(w.oli.Parent_Package_Code__c))
+                    {
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c);
+                    }
+                    else
+                    {
+                        Decimal d1 = mapPackageNameTotalIva.get(w.oli.Parent_Package_Code__c);
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c+d1);
+                    }
+                    
                 }
                 //This Else If condition will execute for the Individual products which are not part of the package.
                 else if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == false)
                 {
-                    System.Debug('>>>>>>>>Individual Product test123455 ' + w.oli);
+                    decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+
                     if(w.product.Aplica_descuento__c)
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
-                    else 
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
+                    else
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity;
                     
                     if(w.oli.TotalPrice != null)
                     {
-                        w.oli.IVA__c = w.oli.TotalPrice * .08;
-                        medicamentosOtrosTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100)) ;
+                        medicamentosOtrosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
                         medicamentosOtrosTotal += w.oli.TotalPrice;
                         medicamentosOtrosIVATotal += w.oli.IVA__c ;
                     }
@@ -1253,89 +1313,105 @@ public class CotizadorController {
         System.Debug(' mapPackageNameTotalAmount test123455' + mapPackageNameTotalAmount);
         for(ProductWrapper w : oliMedicamentosOtrosList)
         {
-           // if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
+             if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
                 //All Packages
                 if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == true)
                 {                    
                     System.Debug(' *****ONly Package  test123455' + w.oli);
-                     //This condition will execute if there is no product in the package.
+                    //This condition will execute if there is no product in the package.
                     if(mapPackageNameTotalAmount.get(w.product.ProductCode) == null)
                     {
-                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
-                        w.oli.IVA__c = w.oli.TotalPrice * .08;
-                        medicamentosOtrosTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                        
+                        decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
+                         medicamentosOtrosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
                         medicamentosOtrosTotal += w.oli.TotalPrice;
                         medicamentosOtrosIVATotal += w.oli.IVA__c ;
+                         
                     }
-                   //This else Condition will execute for All the Packages if that contains product.
+                    //This else Condition will execute for All the Packages if that contains product.
                     else
                     {
-                        w.oli.TotalPrice = mapPackageNameTotalAmount.get(w.product.ProductCode)  * w.oli.Quantity;
+                        
+                        decimal precioProducto = mapPackageNameTotalAmount.get(w.product.ProductCode) + (ActivarMargen == true ? ( mapPackageNameTotalAmount.get(w.product.ProductCode) * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+                        w.oli.TotalPrice = precioProducto  * w.oli.Quantity;
+                        
                         if(w.oli.TotalPrice != null)
                         {
-                            w.oli.IVA__c = w.oli.TotalPrice *  .08;
-                            medicamentosOtrosTotalSINDESCUENTO += mapPackageNameTotalAmountSINDESCUENTO.get(w.product.ProductCode)  * w.oli.Quantity;
-                           
+                            w.oli.IVA__c = mapPackageNameTotalIva.get(w.product.ProductCode);
                             medicamentosOtrosTotal += w.oli.TotalPrice;
+                             medicamentosOtrosTotalSINDESCUENTO += w.oli.TotalPrice;
+                             
                             medicamentosOtrosIVATotal += w.oli.IVA__c ;
+                            
                         }
                     }
                 }
             }
         }
         mapPackageNameTotalAmount.clear();
-        mapPackageNameTotalAmountSINDESCUENTO.clear();
 
         /******************/
         for(ProductWrapper w : oliHonorariosList)
         {
-            //if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
                 //This If condition will execute for the products which are part of the  packages.
                 if(w.oli.Parent_Package_Code__c != null)
                 {
-                    System.Debug('--------package Product   test123455' + w.oli);  
-                    if(w.product.Aplica_descuento__c)            
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                                  
+                    if(w.product.Aplica_descuento__c)
+                        
+                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                    	
                     else
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity;
+					
+                    if(w.oli.TotalPrice != null)
+                        w.oli.IVA__c = w.oli.TotalPrice  * (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
                     
                     if(!mapPackageNameTotalAmount.containsKey(w.oli.Parent_Package_Code__c))
                     {
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity));
-                        
                     }
                     else
                     {
-                        decimal d2 = mapPackageNameTotalAmountSINDESCUENTO.get(w.oli.Parent_Package_Code__c);
-                        
                         Decimal d1 = mapPackageNameTotalAmount.get(w.oli.Parent_Package_Code__c);
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice+d1);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity)+d2);
-                        
                     }
-                    if(w.oli.TotalPrice != null)
-                        w.oli.IVA__c = w.oli.TotalPrice * .08;
+                    
+                    if(!mapPackageNameTotalIva.containsKey(w.oli.Parent_Package_Code__c))
+                    {
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c);
+                    }
+                    else
+                    {
+                        Decimal d1 = mapPackageNameTotalIva.get(w.oli.Parent_Package_Code__c);
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c+d1);
+                    }
+                    
                 }
                 //This Else If condition will execute for the Individual products which are not part of the package.
                 else if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == false)
                 {
-                    System.Debug('>>>>>>>>Individual Product test123455 ' + w.oli);
+                    decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+
                     if(w.product.Aplica_descuento__c)
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
-                    else 
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
+                    else
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity;
                     
                     if(w.oli.TotalPrice != null)
                     {
-                        w.oli.IVA__c = w.oli.TotalPrice *  .08;
-                         honorariosTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100)) ;
+                        honorariosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
                         honorariosTotal += w.oli.TotalPrice;
                         honorariosIVATotal += w.oli.IVA__c ;
                     }
@@ -1345,92 +1421,107 @@ public class CotizadorController {
         System.Debug(' mapPackageNameTotalAmount test123455' + mapPackageNameTotalAmount);
         for(ProductWrapper w : oliHonorariosList)
         {
-            //if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
                 //All Packages
                 if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == true)
-                {            
-                    //This condition will execute if there is no product in the package.    
+                {                    
                     System.Debug(' *****ONly Package  test123455' + w.oli);
+                    //This condition will execute if there is no product in the package.
                     if(mapPackageNameTotalAmount.get(w.product.ProductCode) == null)
                     {
-                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
-                        w.oli.IVA__c = w.oli.TotalPrice * .08;
-                        honorariosTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                        
+                         decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
+                         honorariosTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
                         honorariosTotal += w.oli.TotalPrice;
                         honorariosIVATotal += w.oli.IVA__c ;
                     }
                     //This else Condition will execute for All the Packages if that contains product.
                     else
                     {
-                        w.oli.TotalPrice = mapPackageNameTotalAmount.get(w.product.ProductCode)  * w.oli.Quantity;
+                        
+                        decimal precioProducto = mapPackageNameTotalAmount.get(w.product.ProductCode) + (ActivarMargen == true ? ( mapPackageNameTotalAmount.get(w.product.ProductCode) * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+                        w.oli.TotalPrice = precioProducto  * w.oli.Quantity;
+                        
                         if(w.oli.TotalPrice != null)
                         {
-                            w.oli.IVA__c = w.oli.TotalPrice*  .08;
+                            w.oli.IVA__c = mapPackageNameTotalIva.get(w.product.ProductCode);
                             honorariosTotal += w.oli.TotalPrice;
-                            honorariosTotalSINDESCUENTO += mapPackageNameTotalAmountSINDESCUENTO.get(w.product.ProductCode)  * w.oli.Quantity;
-                            
+                             honorariosTotalSINDESCUENTO += w.oli.TotalPrice;
+                             
                             honorariosIVATotal += w.oli.IVA__c ;
                         }
-                }
+                    }
                 }
             }
         }
         mapPackageNameTotalAmount.clear();
-        mapPackageNameTotalAmountSINDESCUENTO.clear();
         
         /******************/
         for(ProductWrapper w : oliExternalList)
         {
-            //if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
-            //w.oli.Quantity = 1;
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
                 //This If condition will execute for the products which are part of the  packages.
                 if(w.oli.Parent_Package_Code__c != null)
                 {
-                    System.Debug('--------package Product   External' + w.oli);   
-                    if(w.product.Aplica_descuento__c)           
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                                  
+                    if(w.product.Aplica_descuento__c)
+                        
+                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, w.product.Name);
+                    	
                     else
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity;
+					
+                    if(w.oli.TotalPrice != null)
+                        w.oli.IVA__c = w.oli.TotalPrice  * (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
                     
                     if(!mapPackageNameTotalAmount.containsKey(w.oli.Parent_Package_Code__c))
                     {
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity));
-                        
                     }
                     else
                     {
-                        decimal d2 = mapPackageNameTotalAmountSINDESCUENTO.get(w.oli.Parent_Package_Code__c);
-                        
                         Decimal d1 = mapPackageNameTotalAmount.get(w.oli.Parent_Package_Code__c);
                         mapPackageNameTotalAmount.put(w.oli.Parent_Package_Code__c, w.oli.TotalPrice+d1);
-                        mapPackageNameTotalAmountSINDESCUENTO.put(w.oli.Parent_Package_Code__c,(w.oli.Original_Amount__c * w.oli.Quantity)+d2);
-                        
                     }
-                    if(w.oli.TotalPrice != null)
-                        w.oli.IVA__c = w.oli.TotalPrice *  .08;
+                    
+                    if(!mapPackageNameTotalIva.containsKey(w.oli.Parent_Package_Code__c))
+                    {
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c);
+                    }
+                    else
+                    {
+                        Decimal d1 = mapPackageNameTotalIva.get(w.oli.Parent_Package_Code__c);
+                        mapPackageNameTotalIva.put(w.oli.Parent_Package_Code__c, w.oli.IVA__c+d1);
+                    }
+                    
                 }
-               //This Else If condition will execute for the Individual products which are not part of the package.
+                //This Else If condition will execute for the Individual products which are not part of the package.
                 else if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == false)
                 {
-                    System.Debug('>>>>>>>>Individual Product test123455 ' + w.oli);
-                    if(w.product.Aplica_descuento__c)
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity) * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
-                    else
-                        w.oli.TotalPrice = (w.oli.Original_Amount__c * w.oli.Quantity);
+                    decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
 
+                    if(w.product.Aplica_descuento__c)
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Main_Parent_Package_Code__c, w.product.Name);
+                    else
+                        w.oli.TotalPrice = precioProducto * w.oli.Quantity;
+                    
                     if(w.oli.TotalPrice != null)
                     {
-                        w.oli.IVA__c = w.oli.TotalPrice *  .08;
-                        externalTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100)) ;
+                        externalTotalSINDESCUENTO += (precioProducto * w.oli.Quantity);
                         externalTotal += w.oli.TotalPrice;
                         externalIVATotal += w.oli.IVA__c ;
+                        
+                         
                     }
                 }
             }
@@ -1438,55 +1529,58 @@ public class CotizadorController {
         System.Debug(' mapPackageNameTotalAmount test123455' + mapPackageNameTotalAmount);
         for(ProductWrapper w : oliExternalList)
         {
-            //if(showChildProduct == false && w.oli.Child_Product__c)
-            //    continue;
+            if(showChildProduct == false && w.oli.Child_Product__c)
+                continue;
             if(w.oli.Original_Amount__c != null && w.oli.Quantity != null)
             {
                 //All Packages
                 if(w.oli.Parent_Package_Code__c == null && w.oli.Not_For_Create__c == true)
                 {                    
-                     //This condition will execute if there is no product in the package.
                     System.Debug(' *****ONly Package  test123455' + w.oli);
+                    //This condition will execute if there is no product in the package.
                     if(mapPackageNameTotalAmount.get(w.product.ProductCode) == null)
                     {
+                        decimal precioProducto = w.oli.Original_Amount__c + (ActivarMargen == true ? ( w.oli.Original_Amount__c * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+
                         w.oli.TotalPrice = w.oli.Original_Amount__c * w.oli.Quantity * getApplicableDiscountPercentage(w.oli.Parent_Package_Code__c, null);
-                        w.oli.IVA__c = w.oli.TotalPrice *  .08;
-                        externalTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
+                        w.oli.IVA__c = w.oli.TotalPrice *  (w.product.iva__c == null ? 0 :(w.product.iva__c/100));
+                         externalTotalSINDESCUENTO += (w.oli.Original_Amount__c * w.oli.Quantity);
                         externalTotal += w.oli.TotalPrice;
                         externalIVATotal += w.oli.IVA__c ;
+                        
+                         
                     }
-                   //This else Condition will execute for All the Packages if that contains product.
+                    //This else Condition will execute for All the Packages if that contains product.
                     else
                     {
-                        w.oli.TotalPrice = mapPackageNameTotalAmount.get(w.product.ProductCode)  * w.oli.Quantity;
+                        
+                        decimal precioProducto = mapPackageNameTotalAmount.get(w.product.ProductCode) + (ActivarMargen == true ? ( mapPackageNameTotalAmount.get(w.product.ProductCode) * (((w.product.margenDeTipoDescuento__c==null ? 0 :w.product.margenDeTipoDescuento__c) )/100)):0);
+                        w.oli.TotalPrice = precioProducto  * w.oli.Quantity;
+                        
                         if(w.oli.TotalPrice != null)
                         {
-                            w.oli.IVA__c = w.oli.TotalPrice *  .08;
-                            externalTotalSINDESCUENTO += mapPackageNameTotalAmountSINDESCUENTO.get(w.product.ProductCode)  * w.oli.Quantity;
-
-                            
+                            w.oli.IVA__c = mapPackageNameTotalIva.get(w.product.ProductCode);
                             externalTotal += w.oli.TotalPrice;
+                            externalTotalSINDESCUENTO += w.oli.TotalPrice;
                             externalIVATotal += w.oli.IVA__c ;
+                            
+                          
                         }
                     }
                 }
             }
         }
         mapPackageNameTotalAmount.clear();
-        mapPackageNameTotalAmountSINDESCUENTO.clear();
-montoFinalOpp = 0;
+
        montoTotalOppConDescuento = serviceTotal + serviceOtrosTotal + insumosTotal + insumosOtrosTotal + medicamentosTotal  + medicamentosOtrosTotal + honorariosTotal + honorariosOtrosTotal + otrosTotal + externalTotal; 
         montoTotalOpp = serviceTotalSINDESCUENTO +  serviceOtrosTotalSINDESCUENTO +  insumosTotalSINDESCUENTO +  insumosOtrosTotalSINDESCUENTO +  medicamentosTotalSINDESCUENTO +  medicamentosOtrosTotalSINDESCUENTO +  honorariosTotalSINDESCUENTO +  honorariosOtrosTotalSINDESCUENTO +  otrosTotalSINDESCUENTO +  externalTotalSINDESCUENTO ;
        montoTotalIVAOpp =   serviceIVATotal + serviceOtrosIVATotal + insumosIVATotal + insumosOtrosIVATotal + medicamentosIVATotal + medicamentosOtrosIVATotal + honorariosIVATotal + honorariosOtrosIVATotal + otrosIVATotal + externalIVATotal;
        montoFinalOpp = montoTotalOppConDescuento + montoTotalIVAOpp;
-       
-        System.debug('El monto es de: '+montoFinalOpp);
-       
-}
-    @TestVisible
+    }
+        @TestVisible
     private Decimal getApplicableDiscountPercentage(String packageName, String productName)
     {
-
+      
         Lindora = 0;
         SanJose = 0;
         
@@ -1537,11 +1631,14 @@ montoFinalOpp = 0;
                 SanJose = SanJoseHospitalizacion;
                 largeVal= LindoraHospitalizacion > SanJoseHospitalizacion ? LindoraHospitalizacion : SanJoseHospitalizacion;
             }
+            System.Debug(' Lindora ' + Lindora);
+            System.Debug(' SanJose ' + SanJose);
             if(opportunity.Extra_Discount__c > 30)
             {
-               
+                if(opportunity.Approved_Discount__c)
                     applyDiscount =  (100 - opportunity.Extra_Discount__c - largeVal )/100;
-                
+                else
+                    applyDiscount =  (100 - largeVal )/100;
             }
             else
             {
@@ -1554,9 +1651,9 @@ montoFinalOpp = 0;
             if(opportunity.Extra_Discount__c > 30)
             {
                 if(opportunity.Approved_Discount__c){
-                   applyDiscount =  (100 - opportunity.Extra_Discount__c)/100; 
+                    
                 }else{
-                    applyDiscount =  (100 - 0)/100;
+                    applyDiscount =  (100 - opportunity.Extra_Discount__c)/100;
                 }
                     
             }
@@ -1568,7 +1665,7 @@ montoFinalOpp = 0;
         }
         return 1;
     }
-    @TestVisible
+	@TestVisible
     private Decimal calculateDiscount(Decimal d)
     {
         if(opportunity.Extra_Discount__c > 30)
@@ -1585,20 +1682,26 @@ montoFinalOpp = 0;
 
     public void  changeDiscountDropDown(String discountName)
     {
+    
         if(discountName != null && discountName != 'Otros'  && discountName != '')
         {
-            lstDiscount = new List<nivelDescuento__c>();
+            System.Debug('discountName');
+            //String discountRecordId = nivelDescuento.split('~~~~~')[0];
+            List<nivelDescuento__c> lstDiscount = new List<nivelDescuento__c>();
             lstDiscount = [select Id, Name, Porcentaje_de_Descuento__c,(select Id, Paquete__r.Name,descuento__c, Paquete__r.Codigo__c from Descuentos_por_Paquetes__r), 
             (select id, Producto__r.Name, descuento__c from DescuentosPorProducto__r) from nivelDescuento__c where Name =:discountName];
+            //where Id =:discountRecordId];
             for(nivelDescuento__c disc : lstDiscount)
             {
                 mapMainDiscountAmount.put(disc.Name, disc.Porcentaje_de_Descuento__c);
                 for(descuentosPorPaquetes__c discountPerPackage : (List<descuentosPorPaquetes__c>)disc.Descuentos_por_Paquetes__r)
                 {
+                    //paquete__c = Parent Package on paquetesPorPaquete__c object 
+                    //Paquetes__c = Child Package on paquetesPorPaquete__c object
                     List<paquetesPorPaquete__c>  packagePerPackage = [select Id,paquete__r.Name, paquete__r.Codigo__c, Paquetes__r.Name, Paquetes__r.Codigo__c from paquetesPorPaquete__c where paquete__c = :discountPerPackage.Paquete__c];
                     for(paquetesPorPaquete__c ppp : packagePerPackage)
                     {
- 
+                        //mapSubPackagePackageAmount.put(ppp.Paquetes__r.name, ppp.paquete__r.name);
                         mapSubPackagePackageAmount.put(ppp.Paquetes__r.Codigo__c, discountPerPackage.descuento__c);
                     }                    
                     mapPackageNameAmount.put(discountPerPackage.Paquete__r.Codigo__c, discountPerPackage.descuento__c);
@@ -1610,6 +1713,9 @@ montoFinalOpp = 0;
                 }
             }
         }    
+        
+
+    
 
     }
     
@@ -1618,7 +1724,7 @@ montoFinalOpp = 0;
 
     public void addCostProduct()
     {
-		 
+
         
             stepNo = '3';
         Set<String> productIds = new Set<String>();
@@ -1627,8 +1733,8 @@ montoFinalOpp = 0;
                                         FROM listaDePrecios__c 
                                         WHERE Paquete__r.Id =: paquete and listaDePrecios__c =:IdListaPrecios ];
         
-        List<productoPorPaquete__c> prodPaqList = [SELECT Id, Name, Producto__c, cantidad__c, tipo__c, 
-                                                   Producto__r.Name, Producto__r.ProductCode, Producto__r.Tipo__c
+        List<productoPorPaquete__c> prodPaqList = [SELECT Id, Name, Producto__c,Producto__r.margenDeTipoDescuento__c, cantidad__c, tipo__c, 
+                                                   Producto__r.Name, Producto__r.ProductCode, Producto__r.Tipo__c,Producto__r.iva__c
                                                    FROM productoPorPaquete__c
                                                    WHERE Paquete__c =:paquete ];
         /*List<paquetesPorPaquete__c>  paquetesPorPaqueteList = [SELECT Id, Name, paquete__c, 
@@ -1652,10 +1758,10 @@ montoFinalOpp = 0;
             productIds.add(rec.Producto__c);
         }
         
-        List<PricebookEntry> productList = [select id,UnitPrice,  Product2.id,  Product2.Name,  Product2.ProductCode,
-                                               Product2.Tipo__c,  Product2.Aplica_descuento__c
-                                                from PricebookEntry
-                                                where Product2.id in : productIds and  PriceBook2Id =: IdListaPrecios];
+        List<PricebookEntry> productList = [select id,UnitPrice,  Product2.id,  Product2.Name,  Product2.ProductCode,Product2.iva__c,
+                                               Product2.Tipo__c,Product2.margenDeTipoDescuento__c,  Product2.Aplica_descuento__c
+                                      			from PricebookEntry
+                                      			where Product2.id in : productIds and  PriceBook2Id =: IdListaPrecios];
         system.debug('Id lista: '+productIds);
         if(productList.size() > 0)
         {
@@ -1716,7 +1822,81 @@ montoFinalOpp = 0;
             }
         }
 
-        
+        List<OpportunityLineItem> olis = [select Id,  Product2.Name ,Product2.iva__c,iva__c, PriceBookEntryId from OpportunityLineItem where OpportunityId =:opportunityId and Product2.Description = 'DoctorFixedProduct'];
+        if(olis.size() == 1 && contact != null && contact.Name != null && contact.Name != olis[0]. Product2.Name)
+        {
+            System.Debug(' If COndition ');
+            //remove the old item from the list.
+            deleteIndx = 0;
+            oliHonorariosList = deleteUtil(oliHonorariosList);
+            deleteIndx = null;
+
+            //add new item in the list.
+            if(language == 'Inglés')
+            {
+                System.Debug(' Inglés');
+                List<Product2> pList = [select id, Name, ProductCode, Tipo__c, Aplica_descuento__c,margenDeTipoDescuento__c,iva__c, 
+			(select id, UnitPrice from PriceBookEntries where PriceBook2Id =: IdListaPrecios )
+                                        from Product2 where Name =:contact.Name];
+                OpportunityLineItem oli = new OpportunityLineItem(OpportunityId = opportunityId);
+                oli.Quantity = 1;
+                oli.PriceBookEntryId = pList[0].PriceBookEntries[0].Id;////p.PriceBookEntries[0].Id;
+                oli.TotalPrice =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
+                oli.Original_Amount__c =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
+                oli.Parent_Package_Code__c = null;
+                oli.Part_of_Package__c = false;
+                oliHonorariosList.add(new ProductWrapper(oli, pList[0]));
+            }
+            else if(language == 'Español')
+            {
+                System.Debug(' Español');
+                List<Product2> pList = [select id, Name, ProductCode, Tipo__c, Aplica_descuento__c,margenDeTipoDescuento__c,iva__c, 
+                                            (select id, UnitPrice from PriceBookEntries where PriceBook2Id =: IdListaPrecios )
+                                            from Product2 
+                                            where Name =:contact.Name];
+                OpportunityLineItem oli = new OpportunityLineItem(OpportunityId = opportunityId);
+                oli.Quantity = 1;
+                oli.PriceBookEntryId =  pList[0].PriceBookEntries[0].Id;//p.PriceBookEntries[0].Id;
+                oli.TotalPrice =  pList[0].PriceBookEntries[0].UnitPrice; //p.PriceBookEntries[0].UnitPrice;
+                oli.Original_Amount__c =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
+                oli.Parent_Package_Code__c = null;
+                oli.Part_of_Package__c = false;
+                oliHonorariosList.add(new ProductWrapper(oli, pList[0]));
+            }
+        }
+        else if(contact != null && contact.Name != null && olis.size() == 0)
+        {
+            System.Debug(' Else If COndition ' + contact.Name);
+            //Add the appropriate name from the list.
+            if(language == 'Inglés')
+            {
+                System.Debug(' Inglés');
+                List<Product2> pList = [select id, Name, ProductCode, Tipo__c, Aplica_descuento__c,margenDeTipoDescuento__c,iva__c,
+                                         (select id, UnitPrice from PriceBookEntries where PriceBook2Id =: IdListaPrecios ) from Product2 where Name =:contact.Name];
+                OpportunityLineItem oli = new OpportunityLineItem(OpportunityId = opportunityId);
+                oli.Quantity = 1;
+                oli.PriceBookEntryId = pList[0].PriceBookEntries[0].Id;////p.PriceBookEntries[0].Id;
+                oli.TotalPrice =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
+                oli.Original_Amount__c =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
+                oli.Parent_Package_Code__c = null;
+                oli.Part_of_Package__c = false;
+                oliHonorariosList.add(new ProductWrapper(oli, pList[0]));
+            }
+            else if(language == 'Español')
+            {
+                System.Debug(' Español');
+                List<Product2> pList = [select id, Name, ProductCode, Tipo__c, Aplica_descuento__c,margenDeTipoDescuento__c,iva__c,
+                      (select id, UnitPrice from PriceBookEntries where PriceBook2Id =: IdListaPrecios ) from Product2 where Name =:contact.Name];
+                OpportunityLineItem oli = new OpportunityLineItem(OpportunityId = opportunityId);
+                oli.Quantity = 1;
+                oli.PriceBookEntryId =  pList[0].PriceBookEntries[0].Id;//p.PriceBookEntries[0].Id;
+                oli.TotalPrice =  pList[0].PriceBookEntries[0].UnitPrice; //p.PriceBookEntries[0].UnitPrice;
+                oli.Original_Amount__c =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
+                oli.Parent_Package_Code__c = null;
+                oli.Part_of_Package__c = false;
+                oliHonorariosList.add(new ProductWrapper(oli, pList[0]));
+            }
+        }
         calcTotal();
         
         
@@ -1724,7 +1904,7 @@ montoFinalOpp = 0;
     
     public void addManualProduct()
     {
-        List<Product2> productList = [select id, Name, ProductCode, Tipo__c,iva__c, Aplica_descuento__c, 
+        List<Product2> productList = [select id, Name, ProductCode,margenDeTipoDescuento__c, Tipo__c,iva__c, Aplica_descuento__c, 
                                      (select id, UnitPrice from PriceBookEntries
                                       where PriceBook2Id =: IdListaPrecios )
                                       from Product2 
@@ -1872,7 +2052,7 @@ montoFinalOpp = 0;
                                         WHERE Paquete__r.Id =: productId and listaDePrecios__c =:IdListaPrecios ];
         
         List<productoPorPaquete__c> productosPorPaqueteList = [SELECT Id, Name, Producto__c, cantidad__c,
-                                                               tipo__c, precioProducto__c,
+                                                               tipo__c, precioProducto__c,Producto__r.margenDeTipoDescuento__c,
                                         Producto__r.Name,Producto__r.iva__c, Producto__r.ProductCode, Producto__r.Tipo__c
                                         FROM productoPorPaquete__c where Paquete__c =: paqueteList[0].Paquete__r.Id];
         
@@ -1890,7 +2070,7 @@ montoFinalOpp = 0;
         
         String Pricebook2Id = [SELECT Pricebook2Id FROM Opportunity WHERE Id =: opportunityId].Pricebook2Id;
         
-        List<Product2> productList = [select id,iva__c, Name, ProductCode, Tipo__c, Aplica_descuento__c, 
+        List<Product2> productList = [select id,iva__c, Name, ProductCode,margenDeTipoDescuento__c, Tipo__c, Aplica_descuento__c, 
                                     (select id, UnitPrice from PriceBookEntries
                                       where PriceBook2Id =: IdListaPrecios )
                                       from Product2 
@@ -2038,10 +2218,7 @@ montoFinalOpp = 0;
                 if(first == true)
                 {
                     oli.Main_Parent_Package_Code__c = paqueteList[0].Paquete__r.Codigo__c;
-                    if(paquetesPorPaqueteList.size() > 0)
-						oli.Parent_Package_Code__c = null;
-					else
-						oli.Parent_Package_Code__c = paqueteList[0].Paquete__r.Codigo__c;
+                    oli.Parent_Package_Code__c = null;
                 }
                 else
                 {
@@ -2062,7 +2239,7 @@ montoFinalOpp = 0;
                     if(paquetesPorPaqueteList.size()==0)
                         oli.Child_Product__c = true;
                     
-                    if(paqueteList[0].Paquete__r.Name.startsWithIgnoreCase('Kit'))
+                    if(paqueteList[0].Paquete__r.Name.startsWithIgnoreCase('Kits'))
                     {
                         isInsumos = true;
                         if(otros)
@@ -2112,7 +2289,7 @@ montoFinalOpp = 0;
                         isMedicamentos = true;
                         oliMedicamentosOtrosList.add(new ProductWrapper(oli, productMap.get(p.Producto__c)));
                     }
-                    else if(p.Tipo__c == 'Medicamentos')
+                   	else if(p.Tipo__c == 'Medicamentos')
                     {
                         isMedicamentos = true;
                         oliMedicamentosList.add(new ProductWrapper(oli, productMap.get(p.Producto__c)));
@@ -2132,7 +2309,7 @@ montoFinalOpp = 0;
                 else
                 {
                     oli.Child_Product__c = true;
-                    if(paqueteList[0].Paquete__r.Name.startsWithIgnoreCase('Kit'))
+                    if(paqueteList[0].Paquete__r.Name.startsWithIgnoreCase('Kits'))
                     {
                         isInsumos = true;
                         if(otros)
@@ -2594,14 +2771,10 @@ montoFinalOpp = 0;
             update account;
             opportunity.Impuesto_al_Valor_Agregado_IVA__c = montoTotalIVAOpp;
             opportunity.PrecioAproximado_de_la_Cirugia__c = montoTotalOpp;
-            opportunity.Precio_aproximado_de_la_Cirugia_con_Desc__c  = montoTotalOppConDescuento;
+            opportunity.Precio_aproximado_de_la_Cirugia_con_Desc__c	 = montoTotalOppConDescuento;
             opportunity.Precio_aproximado_de_la_Cirugia_IVA__c = montoFinalOpp;
-            if(nivelDescuento == null ){
-                opportunity.Nivel_de_descuento__c = null;
-            }else{
+            if(nivelDescuento != null && nivelDescuento.contains('~~~~~'))
                 opportunity.Nivel_de_descuento__c = nivelDescuento.split('~~~~~')[0];
-            }
-                
             
             update opportunity;
             
@@ -2629,7 +2802,7 @@ montoFinalOpp = 0;
     {
         return new PageReference('/'+opportunityId).setRedirect(true);
     }
-  /*
+    
     public void renamePackageSave()
     {
         System.debug('renamePackageSave invoked ::');
@@ -2663,7 +2836,7 @@ montoFinalOpp = 0;
             ApexPages.addMessage(new ApexPages.message(Apexpages.Severity.ERROR, ex.getMessage()));
         }
     }
-*/
+
     public String getSpanishCreatedDate()
     {
         DateTime dt = opportunity.CreatedDate;
@@ -3045,7 +3218,7 @@ montoFinalOpp = 0;
             opportunity.Approved_Discount__c = false;
             opportunity.Impuesto_al_Valor_Agregado_IVA__c = montoTotalIVAOpp;
             opportunity.PrecioAproximado_de_la_Cirugia__c = montoTotalOpp;
-            opportunity.Precio_aproximado_de_la_Cirugia_con_Desc__c  = montoTotalOppConDescuento;
+            opportunity.Precio_aproximado_de_la_Cirugia_con_Desc__c	 = montoTotalOppConDescuento;
             opportunity.Precio_aproximado_de_la_Cirugia_IVA__c = montoFinalOpp;
             if(nivelDescuento != null && nivelDescuento.contains('~~~~~'))
                 opportunity.Nivel_de_descuento__c = nivelDescuento.split('~~~~~')[0];
@@ -3061,9 +3234,9 @@ montoFinalOpp = 0;
             User us  = [SELECT Id,ManagerId FROM User WHERE id =: opp.OwnerId];
             List<User> us2 = [SELECT Id,ManagerId FROM User WHERE email ='steven.vargas@metropolitanocr.com'];
             if(us.ManagerId != null){
-                Approval.ProcessSubmitRequest req1 = new Approval.ProcessSubmitRequest();
-                req1.setComments('Se ha generado una solicitud de aprobación');
-                req1.setObjectId(opp.Id);
+        		Approval.ProcessSubmitRequest req1 = new Approval.ProcessSubmitRequest();
+        		req1.setComments('Se ha generado una solicitud de aprobación');
+        		req1.setObjectId(opp.Id);
                 req1.setSubmitterId(us.ManagerId);
                 List<Id> ids = new List<Id>();
                 ids.add(us.ManagerId);
@@ -3073,12 +3246,12 @@ montoFinalOpp = 0;
             }else{
               if(us2.size() > 0){
                 Approval.ProcessSubmitRequest req1 = new Approval.ProcessSubmitRequest();
-                req1.setComments('Se ha generado una solicitud de aprobación');
-                req1.setObjectId(opp.Id);
-                req1.setSubmitterId(us2[0].Id);
+        		req1.setComments('Se ha generado una solicitud de aprobación');
+        		req1.setObjectId(opp.Id);
+               	req1.setSubmitterId(us2[0].Id);
                    List<Id> ids = new List<Id>();
-                    ids.add(us2[0].Id);
-                    req1.setNextApproverIds(ids);
+                	ids.add(us2[0].Id);
+                	req1.setNextApproverIds(ids);
                  Approval.ProcessResult result = Approval.process(req1);
                 saveProducts();
               }else{
@@ -3099,216 +3272,5 @@ montoFinalOpp = 0;
        
         
     }
-	
-    public void agregarHonorarioDesdeContacto(){
-        boolean noAgregar  = false;
-        List<OpportunityLineItem> olis = [select Id,  Product2.Name , PriceBookEntryId from OpportunityLineItem where OpportunityId =:opportunityId and Product2.Name =: contact.Name ];
-        List<OpportunityLineItem> olis2 = [select Id,  Product2.Name , PriceBookEntryId from OpportunityLineItem where OpportunityId =:opportunityId and Product2.Name =: contact.Name ];
-        for( ProductWrapper dataHono : oliHonorariosList){
-            if(dataHono.product.ProductCode == contact.Name){
-                noAgregar = true;
-            }
-        }
-        if(noAgregar){
-            
-        }else{
-            if(olis.size() == 1 && contact != null && contact.Name != null && contact.Name != olis[0]. Product2.Name)
-        {
-            System.Debug(' If COndition ');
-            //remove the old item from the list.
-            deleteIndx = 0;
-            oliHonorariosList = deleteUtil(oliHonorariosList);
-            deleteIndx = null;
 
-            //add new item in the list.
-            if(language == 'Inglés')
-            {
-                System.Debug(' Inglés');
-                List<Product2> pList = [select id, Name, ProductCode, Tipo__c, Aplica_descuento__c, 
-            (select id, UnitPrice from PriceBookEntries where PriceBook2Id =: IdListaPrecios )
-                                        from Product2 where Name =:contact.Name];
-                OpportunityLineItem oli = new OpportunityLineItem(OpportunityId = opportunityId);
-                oli.Quantity = 1;
-                oli.PriceBookEntryId = pList[0].PriceBookEntries[0].Id;////p.PriceBookEntries[0].Id;
-                oli.TotalPrice =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
-                oli.Original_Amount__c =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
-                oli.Parent_Package_Code__c = null;
-                oli.Part_of_Package__c = false;
-                oliHonorariosList.add(new ProductWrapper(oli, pList[0]));
-            }
-            else if(language == 'Español')
-            {
-                System.Debug(' Español');
-                List<Product2> pList = [select id, Name, ProductCode, Tipo__c, Aplica_descuento__c, 
-                                            (select id, UnitPrice from PriceBookEntries where PriceBook2Id =: IdListaPrecios )
-                                            from Product2 
-                                            where Name =:contact.Name];
-                OpportunityLineItem oli = new OpportunityLineItem(OpportunityId = opportunityId);
-                oli.Quantity = 1;
-                oli.PriceBookEntryId =  pList[0].PriceBookEntries[0].Id;//p.PriceBookEntries[0].Id;
-                oli.TotalPrice =  pList[0].PriceBookEntries[0].UnitPrice; //p.PriceBookEntries[0].UnitPrice;
-                oli.Original_Amount__c =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
-                oli.Parent_Package_Code__c = null;
-                oli.Part_of_Package__c = false;
-                oliHonorariosList.add(new ProductWrapper(oli, pList[0]));
-            }
-        }
-        else if(contact != null && contact.Name != null && olis.size() == 0)
-        {
-            System.Debug(' Else If COndition ' + contact.Name);
-            //Add the appropriate name from the list.
-            if(language == 'Inglés')
-            {
-                System.Debug(' Inglés');
-                List<Product2> pList = [select id, Name, ProductCode, Tipo__c, Aplica_descuento__c,
-                                         (select id, UnitPrice from PriceBookEntries where PriceBook2Id =: IdListaPrecios ) from Product2 where Name =:contact.Name];
-                 
-                if(pList.size() > 0){
-                    OpportunityLineItem oli = new OpportunityLineItem(OpportunityId = opportunityId);
-                    oli.Quantity = 1;
-                    oli.PriceBookEntryId = pList[0].PriceBookEntries[0].Id;////p.PriceBookEntries[0].Id;
-                    oli.TotalPrice =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
-                    oli.Original_Amount__c =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
-                    oli.Parent_Package_Code__c = null;
-                    oli.Part_of_Package__c = false;
-                    oliHonorariosList.add(new ProductWrapper(oli, pList[0]));
-                }else{
-                    try{
-                    Product2 pp = new Product2();
-                    pp.Name = contact.Name;
-                    pp.ProductCode = contact.Name;
-                    pp.Precio__c = '12';
-                    insert pp;
-                    
-                    PricebookEntry pepD = new PricebookEntry();
-                    pepD.Pricebook2Id = LPrecios.get('Standard Price Book');
-                    pepD.UnitPrice = 1;
-                    pepD.IsActive = true;
-                    pepD.Product2Id = pp.Id;
-                    pepD.CurrencyIsoCode = 'USD';
-                    insert pepD;
-                    
-                    PricebookEntry pepD1 = new PricebookEntry();
-                    pepD1.Pricebook2Id = LPrecios.get('Standard Price Book');
-                    pepD1.UnitPrice = 1;
-                    pepD1.IsActive = true;
-                    pepD1.Product2Id = pp.Id;
-                    pepD1.CurrencyIsoCode = 'CRC';
-                    insert pepD1;
-                    
-                    
-                    
-                    PricebookEntry pepD2 = new PricebookEntry();
-                    pepD2.Pricebook2Id = LPrecios.get('Pac.Int. DOL');
-                    pepD2.UnitPrice = 1;
-                    pepD2.IsActive = true;
-                    pepD2.Product2Id = pp.Id;
-                    pepD2.CurrencyIsoCode = 'USD';
-                    pepD2.UseStandardPrice=false;
-                    insert pepD2;
-                    
-                    PricebookEntry pepD3 = new PricebookEntry();
-                    pepD3.Pricebook2Id = LPrecios.get('Pac.Int. COL');
-                    pepD3.UnitPrice = 1;
-                    pepD3.IsActive = true;
-                    pepD3.Product2Id = pp.Id;
-                    pepD3.UseStandardPrice=false;
-                    pepD3.CurrencyIsoCode = 'CRC';
-                    insert pepD3;
-                    
-                   System.debug('Salida Products pLists2: '+IdListaPrecios);
-                    List<Product2> pLists2 = [select id, Name, ProductCode, Tipo__c, Aplica_descuento__c,
-                                         (select id, UnitPrice from PriceBookEntries where PriceBook2Id =: IdListaPrecios ) from Product2  where Name =:contact.Name];
-                
-                    OpportunityLineItem oli = new OpportunityLineItem(OpportunityId = opportunityId);
-                    oli.Quantity = 1;
-                    oli.PriceBookEntryId = pLists2[0].PriceBookEntries[0].Id;////p.PriceBookEntries[0].Id;
-                    oli.TotalPrice =  pLists2[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
-                    oli.Original_Amount__c =  pLists2[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
-                    oli.Parent_Package_Code__c = null;
-                    oli.Part_of_Package__c = false;
-                    oliHonorariosList.add(new ProductWrapper(oli, pLists2[0]));
-                    }catch(Exception ex){
-                        system.debug('Error ex');
-                    }        
-                }
-                
-            }
-            else if(language == 'Español')
-            {
-                System.Debug(' Español');
-               List<Product2> pList = [select id, Name, ProductCode, Tipo__c, Aplica_descuento__c,
-                                         (select id, UnitPrice from PriceBookEntries where PriceBook2Id =: IdListaPrecios ) from Product2 where Name =:contact.Name];
-                if(pList.size() > 0){
-                    OpportunityLineItem oli = new OpportunityLineItem(OpportunityId = opportunityId);
-                    oli.Quantity = 1;
-                    oli.PriceBookEntryId = pList[0].PriceBookEntries[0].Id;////p.PriceBookEntries[0].Id;
-                    oli.TotalPrice =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
-                    oli.Original_Amount__c =  pList[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
-                    oli.Parent_Package_Code__c = null;
-                    oli.Part_of_Package__c = false;
-                    oliHonorariosList.add(new ProductWrapper(oli, pList[0]));
-                }else{
-                    try{
-                    Product2 pp = new Product2();
-                    pp.Name = contact.Name;
-                    pp.ProductCode = contact.Name;
-                    pp.Precio__c = '12';
-                    insert pp;
-                    
-                    PricebookEntry pepD = new PricebookEntry();
-                    pepD.Pricebook2Id = LPrecios.get('Standard Price Book');
-                    pepD.UnitPrice = 1;
-                    pepD.IsActive = true;
-                    pepD.Product2Id = pp.Id;
-                    pepD.CurrencyIsoCode = 'USD';
-                    insert pepD;
-                    
-                    PricebookEntry pepD1 = new PricebookEntry();
-                    pepD1.Pricebook2Id = LPrecios.get('Standard Price Book');
-                    pepD1.UnitPrice = 1;
-                    pepD1.IsActive = true;
-                    pepD1.Product2Id = pp.Id;
-                    pepD1.CurrencyIsoCode = 'CRC';
-                    insert pepD1;
-                    
-                    PricebookEntry pepD2 = new PricebookEntry();
-                    pepD2.Pricebook2Id = LPrecios.get('Pac.Int. DOL');
-                    pepD2.UnitPrice = 1;
-                    pepD2.IsActive = true;
-                    pepD2.Product2Id = pp.Id;
-                    pepD2.CurrencyIsoCode = 'USD';
-                    insert pepD2;
-                    
-                    PricebookEntry pepD3 = new PricebookEntry();
-                    pepD3.Pricebook2Id = LPrecios.get('Pac.Int. COL');
-                    pepD3.UnitPrice = 1;
-                    pepD3.IsActive = true;
-                    pepD3.Product2Id = pp.Id;
-                    pepD3.CurrencyIsoCode = 'CRC';
-                    insert pepD3;
-                    
-                   
-                    List<Product2> pLists = [select id, Name, ProductCode, Tipo__c, Aplica_descuento__c,
-                                         (select id, UnitPrice from PriceBookEntries where PriceBook2Id =: IdListaPrecios ) from Product2 where Name =:contact.Name];
-                
-                    OpportunityLineItem oli = new OpportunityLineItem(OpportunityId = opportunityId);
-                    oli.Quantity = 1;
-                    oli.PriceBookEntryId = pLists[0].PriceBookEntries[0].Id;////p.PriceBookEntries[0].Id;
-                    oli.TotalPrice =  pLists[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
-                    oli.Original_Amount__c =  pLists[0].PriceBookEntries[0].UnitPrice;//p.PriceBookEntries[0].UnitPrice;
-                    oli.Parent_Package_Code__c = null;
-                    oli.Part_of_Package__c = false;
-                    oliHonorariosList.add(new ProductWrapper(oli, pLists[0]));
-                    }catch(Exception ex){
-                        System.debug('error');
-                    }         
-                }
-            }
-        }
-        }
-        
-        
-        calcTotal();
-    }
 }
